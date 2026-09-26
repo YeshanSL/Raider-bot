@@ -1,5 +1,41 @@
-const { Events, EmbedBuilder } = require('discord.js');
+const { Events, EmbedBuilder, ActivityType } = require('discord.js');
 const db = require('../database');
+
+// Best-effort read of "what game are they currently playing", used to tag
+// voice sessions for the weekly Wrapped recap. Returns null if nothing/not
+// visible (requires the Presence intent to be enabled — see index.js).
+function currentGame(member) {
+  const activity = member?.presence?.activities?.find(a => a.type === ActivityType.Playing);
+  return activity?.name || null;
+}
+
+// Prepends/removes the AFK prefix on a member's nickname when they enter or
+// leave the server's configured AFK voice channel (Server Settings →
+// Overview → Afk Channel). No-op if the server hasn't set one.
+async function syncAfkNickname(oldState, newState, client) {
+  const guild = newState.guild || oldState.guild;
+  const afkChannelId = guild?.afkChannelId;
+  if (!afkChannelId) return;
+
+  const member = newState.member || oldState.member;
+  if (!member || member.user.bot) return;
+
+  const prefix = client.config.AFK_PREFIX;
+  const enteredAfk = newState.channelId === afkChannelId && oldState.channelId !== afkChannelId;
+  const leftAfk = oldState.channelId === afkChannelId && newState.channelId !== afkChannelId;
+
+  if (enteredAfk) {
+    const current = member.nickname || member.user.username;
+    if (!current.startsWith(prefix)) {
+      await member.setNickname(`${prefix}${current}`.slice(0, 32)).catch(() => {});
+    }
+  } else if (leftAfk) {
+    if (member.nickname?.startsWith(prefix)) {
+      const restored = member.nickname.slice(prefix.length);
+      await member.setNickname(restored || null).catch(() => {});
+    }
+  }
+}
 
 function formatTime(seconds) {
   const h = Math.floor(seconds / 3600);
@@ -19,6 +55,8 @@ module.exports = {
     if (!userId || !guildId) return;
     if (newState.member?.user?.bot) return;
 
+    await syncAfkNickname(oldState, newState, client);
+
     const joinedChannel = !oldState.channelId && newState.channelId;
     const leftChannel = oldState.channelId && !newState.channelId;
     const switchedChannel = oldState.channelId && newState.channelId && oldState.channelId !== newState.channelId;
@@ -31,7 +69,7 @@ module.exports = {
     // ─── Switch VC ───
     if (switchedChannel) {
       // End old, start new (keeps time tracking)
-      const result = db.endVoiceSession(guildId, userId);
+      const result = db.endVoiceSession(guildId, userId, currentGame(newState.member));
       db.startVoiceSession(guildId, userId, newState.channelId);
       // Show summary for old channel if significant
       if (result && result.duration > 60) {
@@ -41,7 +79,7 @@ module.exports = {
 
     // ─── Leave VC ───
     if (leftChannel) {
-      const result = db.endVoiceSession(guildId, userId);
+      const result = db.endVoiceSession(guildId, userId, currentGame(oldState.member));
       if (result && result.duration > 10) {
         const voiceXPGained = Math.floor((result.duration / 60) * config.XP_PER_VOICE_MIN);
         if (voiceXPGained > 0) {

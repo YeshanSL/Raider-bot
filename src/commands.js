@@ -15,6 +15,10 @@ const commands = [
     .setDescription('Show the top 10 members on the server'),
 
   new SlashCommandBuilder()
+    .setName('wrapped')
+    .setDescription('Manually run the weekly recap right now (normally auto-posts Sundays 12PM IST)'),
+
+  new SlashCommandBuilder()
     .setName('voicestats')
     .setDescription("View your or someone else's voice activity stats")
     .addUserOption(opt =>

@@ -6,6 +6,7 @@ const XP_FILE = path.join(DB_PATH, 'xp.json');
 const VOICE_FILE = path.join(DB_PATH, 'voice.json');
 const SESSIONS_FILE = path.join(DB_PATH, 'sessions.json');
 const TEAM_FILE = path.join(DB_PATH, 'teams.json');
+const WRAPPED_FILE = path.join(DB_PATH, 'wrapped_snapshot.json');
 
 // Ensure data directory exists
 if (!fs.existsSync(DB_PATH)) fs.mkdirSync(DB_PATH, { recursive: true });
@@ -35,6 +36,14 @@ function setXP(guildId, userId, data) {
 
 function xpForLevel(level) {
   return 100 * (level + 1) * (level + 1);
+}
+
+// Total XP ever earned to reach { level, xp }, used to measure XP gained
+// between two points in time (e.g. for the weekly Wrapped recap).
+function totalXPEarned(level, xp) {
+  let total = xp;
+  for (let l = 0; l < level; l++) total += xpForLevel(l);
+  return total;
 }
 
 function addXP(guildId, userId, amount) {
@@ -67,7 +76,7 @@ function startVoiceSession(guildId, userId, channelId) {
   activeSessions[guildId][userId] = { joinTime: Date.now(), channelId };
 }
 
-function endVoiceSession(guildId, userId) {
+function endVoiceSession(guildId, userId, game = null) {
   const session = activeSessions[guildId]?.[userId];
   if (!session) return null;
   const duration = Math.floor((Date.now() - session.joinTime) / 1000); // seconds
@@ -75,11 +84,17 @@ function endVoiceSession(guildId, userId) {
   // Save to history
   const db = readJSON(SESSIONS_FILE);
   if (!db[guildId]) db[guildId] = [];
-  db[guildId].push({ userId, channelId: session.channelId, duration, timestamp: Date.now() });
-  // Keep last 500 sessions per guild
-  if (db[guildId].length > 500) db[guildId] = db[guildId].slice(-500);
+  db[guildId].push({ userId, channelId: session.channelId, duration, timestamp: Date.now(), game });
+  // Keep last 2000 sessions per guild (enough for a weekly recap on an active server)
+  if (db[guildId].length > 2000) db[guildId] = db[guildId].slice(-2000);
   writeJSON(SESSIONS_FILE, db);
-  return { duration, channelId: session.channelId };
+  return { duration, channelId: session.channelId, game };
+}
+
+// All sessions for a guild that ended at or after `sinceTimestamp` (ms epoch).
+function getSessionsSince(guildId, sinceTimestamp) {
+  const db = readJSON(SESSIONS_FILE);
+  return (db[guildId] || []).filter(s => s.timestamp >= sinceTimestamp);
 }
 
 function getActiveSession(guildId, userId) {
@@ -119,9 +134,24 @@ function setTeams(guildId, data) {
   writeJSON(TEAM_FILE, db);
 }
 
+// ─── Weekly Wrapped snapshot ───
+// Stores each user's level/xp as of the last Wrapped run, so the next run
+// can measure how much they gained since then.
+function getWrappedSnapshot(guildId) {
+  const db = readJSON(WRAPPED_FILE);
+  return db[guildId] || {};
+}
+
+function setWrappedSnapshot(guildId, data) {
+  const db = readJSON(WRAPPED_FILE);
+  db[guildId] = data;
+  writeJSON(WRAPPED_FILE, db);
+}
+
 module.exports = {
-  getXP, setXP, addXP, xpForLevel, getLeaderboard,
+  getXP, setXP, addXP, xpForLevel, totalXPEarned, getLeaderboard,
   startVoiceSession, endVoiceSession, getActiveSession,
-  getActiveSessionsForChannel, tickVoiceXP,
+  getActiveSessionsForChannel, getSessionsSince, tickVoiceXP,
   getTeams, setTeams,
+  getWrappedSnapshot, setWrappedSnapshot,
 };

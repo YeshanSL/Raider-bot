@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # ⚔️ Raider Bot
 
 A full-featured Discord bot for gaming communities — leveling, voice tracking, FPS team mode, welcome messages, and more.
@@ -156,6 +155,3 @@ For 24/7 uptime, host on:
 ---
 
 Built with ❤️ for the Raider squad.
-=======
-# Raider-bot
->>>>>>> bfd67cfdee34f634321cf1b6971d1d79b966ba01
