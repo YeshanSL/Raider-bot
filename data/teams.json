@@ -1,0 +1,16 @@
+{
+  "980089449687965726": {
+    "active": false,
+    "teams": {
+      "team1": [],
+      "team2": []
+    },
+    "channelId": "1497891061274509415",
+    "t1vcId": null,
+    "t2vcId": null,
+    "categoryId": null,
+    "panelOn": false,
+    "panelChannelId": null,
+    "panelMessageId": null
+  }
+}
