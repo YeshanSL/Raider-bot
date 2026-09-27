@@ -20,6 +20,12 @@ module.exports = {
   // ─── Admin role that can control team mode ───
   ADMIN_ROLE_ID: process.env.ADMIN_ROLE_ID || '',
 
+  // ─── Points shop ───
+  // How many points a member earns per level gained (from chat OR voice XP).
+  // Spending points on shop items never touches their actual level/XP —
+  // points are a separate balance, so the leaderboard stays untouched.
+  POINTS_PER_LEVEL_UP: 10,
+
   // ─── AFK nickname prefix ───
   // Prepended to a member's nickname while they're sitting in the server's
   // configured AFK voice channel (Server Settings → Overview → Afk Channel).
@@ -34,5 +40,6 @@ module.exports = {
     team: 0xED4245,
     info: 0x5865F2,
     wrapped: 0x1DB954,
+    shop: 0xF1C40F,
   },
 };

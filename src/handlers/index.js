@@ -1,5 +1,5 @@
 // Handler registry — returns handler or null
-const handlers = ['rank', 'leaderboard', 'team', 'dashboard', 'setchannel', 'voicestats', 'help', 'wrapped'];
+const handlers = ['rank', 'leaderboard', 'team', 'dashboard', 'setchannel', 'voicestats', 'help', 'wrapped', 'shop', 'points'];
 
 module.exports = function getHandler(command) {
   if (!handlers.includes(command)) return null;

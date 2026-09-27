@@ -62,6 +62,42 @@ function buildArgs(interaction) {
     return [interaction.options.getString('type')];
   }
 
+  if (command === 'shop') {
+    const sub = interaction.options.getSubcommand();
+    if (sub === 'buy') {
+      const item = interaction.options.getString('item');
+      const text = interaction.options.getString('text') || '';
+      return ['buy', item, text];
+    }
+    if (sub === 'additem') {
+      const name = interaction.options.getString('name');
+      const price = interaction.options.getInteger('price');
+      const type = interaction.options.getString('type');
+      const multiplier = interaction.options.getNumber('multiplier');
+      const durationMinutes = interaction.options.getInteger('duration_minutes');
+      const xpAmount = interaction.options.getInteger('xp_amount');
+      return [
+        'additem', name, String(price), type,
+        multiplier != null ? String(multiplier) : '',
+        durationMinutes != null ? String(durationMinutes) : '',
+        xpAmount != null ? String(xpAmount) : '',
+      ];
+    }
+    if (sub === 'removeitem') {
+      return ['removeitem', interaction.options.getString('name')];
+    }
+    return [sub]; // 'view'
+  }
+
+  if (command === 'points') {
+    const sub = interaction.options.getSubcommand();
+    if (sub === 'gift') {
+      const amount = interaction.options.getInteger('amount');
+      return ['gift', 'user', String(amount)];
+    }
+    return [sub]; // 'balance'
+  }
+
   return [];
 }
 
