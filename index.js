@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, Collection, ActivityType } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, ActivityType, Events } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
@@ -52,7 +52,7 @@ const tags = [
 ];
 let tagIndex = 0;
 
-client.once('ready', () => {
+client.once(Events.ClientReady, () => {
   console.log(`✅ Raider is online as ${client.user.tag}`);
   // Set initial tag
   client.user.setActivity(tags[0].name, { type: tags[0].type });
