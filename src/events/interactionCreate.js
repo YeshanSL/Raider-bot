@@ -6,14 +6,18 @@ const getHandler = require('../handlers/index');
 // message.mentions, message.reply, ...). This lets `!raider rank` and
 // `/rank` both run through the exact same handler code.
 function buildCompatMessage(interaction, args) {
-  const optUser = interaction.options.getUser?.('user') || null;
+  // Most commands name the option "user"; the soundboard commands call it "member".
+  const userOptName = interaction.commandName.startsWith('soundboard-') ? 'member' : 'user';
+  const optUser = interaction.options.getUser?.(userOptName) || null;
   let optMember = null;
   if (optUser) {
-    optMember = interaction.options.getMember?.('user') || interaction.guild?.members?.cache?.get(optUser.id) || null;
+    optMember = interaction.options.getMember?.(userOptName) || interaction.guild?.members?.cache?.get(optUser.id) || null;
   }
   const optChannel = interaction.options.getChannel?.('channel') || null;
 
   return {
+    // Raw interaction, for handlers that need more than user/channel (e.g. soundboard).
+    interaction,
     author: interaction.user,
     member: interaction.member,
     guild: interaction.guild,
@@ -58,44 +62,12 @@ function buildArgs(interaction) {
     return [sub];
   }
 
+  if (command.startsWith('soundboard-')) {
+    return [command.slice('soundboard-'.length)]; // 'block' | 'unblock' | 'status'
+  }
+
   if (command === 'setchannel') {
     return [interaction.options.getString('type')];
-  }
-
-  if (command === 'shop') {
-    const sub = interaction.options.getSubcommand();
-    if (sub === 'buy') {
-      const item = interaction.options.getString('item');
-      const text = interaction.options.getString('text') || '';
-      return ['buy', item, text];
-    }
-    if (sub === 'additem') {
-      const name = interaction.options.getString('name');
-      const price = interaction.options.getInteger('price');
-      const type = interaction.options.getString('type');
-      const multiplier = interaction.options.getNumber('multiplier');
-      const durationMinutes = interaction.options.getInteger('duration_minutes');
-      const xpAmount = interaction.options.getInteger('xp_amount');
-      return [
-        'additem', name, String(price), type,
-        multiplier != null ? String(multiplier) : '',
-        durationMinutes != null ? String(durationMinutes) : '',
-        xpAmount != null ? String(xpAmount) : '',
-      ];
-    }
-    if (sub === 'removeitem') {
-      return ['removeitem', interaction.options.getString('name')];
-    }
-    return [sub]; // 'view'
-  }
-
-  if (command === 'points') {
-    const sub = interaction.options.getSubcommand();
-    if (sub === 'gift') {
-      const amount = interaction.options.getInteger('amount');
-      return ['gift', 'user', String(amount)];
-    }
-    return [sub]; // 'balance'
   }
 
   return [];

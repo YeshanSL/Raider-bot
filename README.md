@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # ⚔️ Raider Bot
 
 A full-featured Discord bot for gaming communities — leveling, voice tracking, FPS team mode, welcome messages, and more.
@@ -97,6 +98,18 @@ Split one VC into two isolated teams — like FreeFire squad audio grouping.
 **How it works:**  
 When activated, the bot creates two private sub-channels under a "RAIDER TEAMS" category, moves each team to their channel, and restricts audio so only teammates can hear each other. When deactivated, everyone gets moved back and temp channels are deleted.
 
+### ✅ Soundboard Control (Admin Only)
+Stop a specific member from using the voice-channel Soundboard.
+
+```
+/soundboard-block @member [channel1..channel5]    — Block soundboard (every voice channel if none picked)
+/soundboard-unblock @member [channel1..channel5]  — Restore access
+/soundboard-status @member                        — Check where they're restricted
+```
+
+**How it works:**  
+The bot adds a per-member permission overwrite that denies **Use Soundboard** on each voice channel. Nothing else about the member changes. Blocks on "all voice channels" are also applied to voice channels created later (including team-mode channels). The server owner and anyone with **Administrator** bypass channel permissions, so they can't be restricted. The bot needs **Manage Permissions** on the channels it edits (covered by the Administrator invite).
+
 ---
 
 ## 📋 All Commands
@@ -108,6 +121,7 @@ When activated, the bot creates two private sub-channels under a "RAIDER TEAMS" 
 | `!raider voicestats [@user]` | Voice session history |
 | `!raider dashboard` | Interactive stats panel |
 | `!raider team ...` | FPS team mode (admin) |
+| `/soundboard-block` · `/soundboard-unblock` · `/soundboard-status` | Soundboard restrictions (admin) |
 | `!raider setchannel <type> #ch` | Configure channels (admin) |
 | `!raider help` | Full command list |
 
@@ -136,6 +150,7 @@ raider-bot/
 │       ├── dashboard.js
 │       ├── setchannel.js
 │       ├── voicestats.js
+│       ├── soundboard.js  # Soundboard block/unblock/status
 │       └── help.js
 └── data/                  # Auto-created JSON storage
     ├── xp.json
@@ -155,3 +170,6 @@ For 24/7 uptime, host on:
 ---
 
 Built with ❤️ for the Raider squad.
+=======
+# Raider-bot
+>>>>>>> bfd67cfdee34f634321cf1b6971d1d79b966ba01

@@ -29,6 +29,14 @@ module.exports = async (message, args, client) => {
         ].join('\n'),
       },
       {
+        name: '🔇 Soundboard Control (Admin)',
+        value: [
+          '`/soundboard-block <member> [channels]` — Block soundboard (all voice channels if none picked)',
+          '`/soundboard-unblock <member> [channels]` — Restore access',
+          '`/soundboard-status <member>` — Check the restriction',
+        ].join('\n'),
+      },
+      {
         name: '⚙️ Config (Admin)',
         value: '`/setchannel <type> <channel>` — Set welcome, boost, levelup, voice or dashboard channel',
       },
