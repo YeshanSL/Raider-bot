@@ -1,17 +1,4 @@
 const { EmbedBuilder, PermissionsBitField } = require('discord.js');
-const fs = require('fs');
-const path = require('path');
-
-const OVERRIDE_FILE = path.join(__dirname, '../../data/channel_overrides.json');
-
-function readOverrides() {
-  if (!fs.existsSync(OVERRIDE_FILE)) return {};
-  try { return JSON.parse(fs.readFileSync(OVERRIDE_FILE, 'utf8')); } catch { return {}; }
-}
-
-function writeOverrides(data) {
-  fs.writeFileSync(OVERRIDE_FILE, JSON.stringify(data, null, 2));
-}
 
 const VALID_TYPES = {
   welcome: 'WELCOME_CHANNEL_ID',
@@ -43,10 +30,7 @@ module.exports = async (message, args, client) => {
 
   if (!channel) return message.reply('❌ Please mention a channel: `!raider setchannel welcome #welcome`');
 
-  const overrides = readOverrides();
-  if (!overrides[message.guild.id]) overrides[message.guild.id] = {};
-  overrides[message.guild.id][VALID_TYPES[type]] = channel.id;
-  writeOverrides(overrides);
+  client.db.setChannelOverride(message.guild.id, VALID_TYPES[type], channel.id);
 
   // Apply to config dynamically
   client.config[VALID_TYPES[type]] = channel.id;

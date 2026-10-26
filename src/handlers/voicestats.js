@@ -1,6 +1,4 @@
 const { EmbedBuilder } = require('discord.js');
-const fs = require('fs');
-const path = require('path');
 
 function formatTime(seconds) {
   const h = Math.floor(seconds / 3600);
@@ -15,13 +13,7 @@ module.exports = async (message, args, client) => {
   const target = message.mentions.users.first() || message.author;
   const guildId = message.guild.id;
 
-  const SESSIONS_FILE = path.join(__dirname, '../../data/sessions.json');
-  let sessions = {};
-  if (fs.existsSync(SESSIONS_FILE)) {
-    try { sessions = JSON.parse(fs.readFileSync(SESSIONS_FILE, 'utf8')); } catch {}
-  }
-
-  const userSessions = (sessions[guildId] || []).filter(s => s.userId === target.id);
+  const userSessions = client.db.getSessions(guildId).filter(s => s.userId === target.id);
   const totalSeconds = userSessions.reduce((sum, s) => sum + s.duration, 0);
   const sessionCount = userSessions.length;
   const avgSeconds = sessionCount > 0 ? Math.floor(totalSeconds / sessionCount) : 0;
