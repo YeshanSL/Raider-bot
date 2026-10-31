@@ -1,19 +1,7 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, Collection, ActivityType, Events } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, ActivityType } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
-const http = require('http');
-
-// ─── Keep-alive web server ───
-// Render's free "Web Service" plan expects something listening on an HTTP
-// port, or it treats the deploy as failed. This tiny server has nothing to
-// do with the bot itself — it just answers "OK" so Render's health check
-// (and an uptime pinger, if you set one up) see the app as alive.
-const PORT = process.env.PORT || 3000;
-http.createServer((req, res) => {
-  res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('Raider bot is running.');
-}).listen(PORT, () => console.log(`🌐 Keep-alive server listening on port ${PORT}`));
 
 const client = new Client({
   intents: [
@@ -26,6 +14,9 @@ const client = new Client({
     GatewayIntentBits.GuildPresences,
   ],
 });
+
+// Web server: Render health check + live stats for the website (/status)
+require('./src/status-server')(client);
 
 client.commands = new Collection();
 client.config = require('./src/config');
@@ -52,7 +43,7 @@ const tags = [
 ];
 let tagIndex = 0;
 
-client.once(Events.ClientReady, () => {
+client.once('ready', () => {
   console.log(`✅ Raider is online as ${client.user.tag}`);
   // Set initial tag
   client.user.setActivity(tags[0].name, { type: tags[0].type });
@@ -67,26 +58,4 @@ client.once(Events.ClientReady, () => {
   }, 40000);
 });
 
-// Load data from MongoDB before logging in, so every handler sees it
-client.db.connect()
-  .then(() => {
-    // Re-apply channels saved via /setchannel
-    for (const overrides of Object.values(client.db.getAllChannelOverrides())) {
-      Object.assign(client.config, overrides);
-    }
-    return client.login(process.env.DISCORD_TOKEN);
-  })
-  .catch(err => {
-    console.error('❌ Startup failed:', err.message);
-    process.exit(1);
-  });
-
-// Render sends SIGTERM on redeploy/restart — finish pending DB writes first
-for (const signal of ['SIGTERM', 'SIGINT']) {
-  process.on(signal, async () => {
-    console.log(`🛑 ${signal} received, saving data...`);
-    await client.db.close().catch(() => {});
-    client.destroy();
-    process.exit(0);
-  });
-}
+client.login(process.env.DISCORD_TOKEN);

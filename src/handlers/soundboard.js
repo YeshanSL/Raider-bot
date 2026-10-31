@@ -19,7 +19,9 @@ const {
 // Exception: the server owner and anyone with the Administrator permission
 // bypass every channel overwrite, so they can't be restricted this way.
 
+// A block denies BOTH: the server's own soundboard and sounds from other servers.
 const FLAG = PermissionsBitField.Flags.UseSoundboard;
+const MASK = PermissionsBitField.Flags.UseSoundboard | PermissionsBitField.Flags.UseExternalSounds;
 const MAX_CHANNEL_OPTIONS = 5; // must match the number of channelN options in commands.js
 
 function isAdmin(member, config) {
@@ -37,23 +39,31 @@ function getVoiceChannels(guild) {
 // member on one channel. Returns 'changed' or 'unchanged'. Throws on API errors.
 async function applyToChannel(channel, userId, block, reason) {
   const existing = channel.permissionOverwrites.cache.get(userId);
-  const alreadyDenied = !!existing && (existing.deny.bitfield & FLAG) === FLAG;
+  const denied = existing ? existing.deny.bitfield & MASK : 0n;
 
   if (block) {
-    if (alreadyDenied) return 'unchanged';
-    await channel.permissionOverwrites.edit(userId, { UseSoundboard: false }, { type: OverwriteType.Member, reason });
+    if (denied === MASK) return 'unchanged'; // both already denied
+    await channel.permissionOverwrites.edit(
+      userId,
+      { UseSoundboard: false, UseExternalSounds: false },
+      { type: OverwriteType.Member, reason },
+    );
     return 'changed';
   }
 
-  if (!alreadyDenied) return 'unchanged';
+  if (denied === 0n) return 'unchanged'; // nothing of ours to remove
   // If removing our deny leaves the overwrite empty, delete it entirely so we
   // don't leave clutter behind. Otherwise just clear our one flag (keeps any
   // other overwrites on that member, e.g. team-mode Connect/Speak, intact).
-  const remainingDeny = existing.deny.bitfield & ~FLAG;
+  const remainingDeny = existing.deny.bitfield & ~MASK;
   if (remainingDeny === 0n && existing.allow.bitfield === 0n) {
     await existing.delete(reason);
   } else {
-    await channel.permissionOverwrites.edit(userId, { UseSoundboard: null }, { type: OverwriteType.Member, reason });
+    await channel.permissionOverwrites.edit(
+      userId,
+      { UseSoundboard: null, UseExternalSounds: null },
+      { type: OverwriteType.Member, reason },
+    );
   }
   return 'changed';
 }
@@ -170,7 +180,7 @@ module.exports = async (message, args, client) => {
 
     const scope = selected.length ? `${succeeded.length} selected voice channel(s)` : 'all voice channels';
     let text = succeeded.length
-      ? `🔇 **${target.displayName}** can no longer use the Soundboard in ${scope}.`
+      ? `🔇 **${target.displayName}** can no longer use the Soundboard or external sounds in ${scope}.`
       : `❌ I couldn't restrict **${target.displayName}** in any channel.`;
     if (res.unchanged.length && succeeded.length) text += ` (${res.unchanged.length} already restricted)`;
     if (res.failed.length) text += describeFailures(res.failed);
@@ -221,7 +231,7 @@ module.exports = async (message, args, client) => {
     const rec = db.getSoundboardBlocks(guild.id)[target.id];
     const blocked = allVoice.filter(ch => {
       const ow = ch.permissionOverwrites.cache.get(target.id);
-      return ow && (ow.deny.bitfield & FLAG) === FLAG;
+      return ow && (ow.deny.bitfield & MASK) !== 0n;
     });
     const cannotUse = allVoice.filter(ch => !ch.permissionsFor(target).has(FLAG));
     const bypasses = target.id === guild.ownerId || target.permissions.has(PermissionsBitField.Flags.Administrator);

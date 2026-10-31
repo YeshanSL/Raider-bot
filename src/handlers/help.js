@@ -31,7 +31,7 @@ module.exports = async (message, args, client) => {
       {
         name: '🔇 Soundboard Control (Admin)',
         value: [
-          '`/soundboard-block <member> [channels]` — Block soundboard (all voice channels if none picked)',
+          '`/soundboard-block <member> [channels]` — Block soundboard + external sounds (all voice channels if none picked)',
           '`/soundboard-unblock <member> [channels]` — Restore access',
           '`/soundboard-status <member>` — Check the restriction',
         ].join('\n'),

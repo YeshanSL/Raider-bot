@@ -108,7 +108,7 @@ Stop a specific member from using the voice-channel Soundboard.
 ```
 
 **How it works:**  
-The bot adds a per-member permission overwrite that denies **Use Soundboard** on each voice channel. Nothing else about the member changes. Blocks on "all voice channels" are also applied to voice channels created later (including team-mode channels). The server owner and anyone with **Administrator** bypass channel permissions, so they can't be restricted. The bot needs **Manage Permissions** on the channels it edits (covered by the Administrator invite).
+The bot adds a per-member permission overwrite that denies **Use Soundboard** and **Use External Sounds** on each voice channel. Nothing else about the member changes. Blocks on "all voice channels" are also applied to voice channels created later (including team-mode channels). The server owner and anyone with **Administrator** bypass channel permissions, so they can't be restricted. The bot needs **Manage Permissions** on the channels it edits (covered by the Administrator invite).
 
 ---
 
