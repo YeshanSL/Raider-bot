@@ -15,17 +15,17 @@ const isAdmin = (m, cfg) =>
   !m.user.bot && (m.permissions.has('Administrator') || (cfg.ADMIN_ROLE_ID && m.roles.cache.has(cfg.ADMIN_ROLE_ID)));
 const person = (m, role) => ({ name: m.displayName, role, avatar: m.displayAvatarURL({ extension: 'png', size: 128 }) });
 
-// Owner + admins of ONE server (the one you choose), refreshed at most once a minute.
-async function homeInfo(client) {
-  if (!HOME_ID) return null;
-  if (Date.now() - homeCache.at < 60_000) return homeCache.data;
+// Owner + admins of ONE server (the one you choose). Loaded in the background and refreshed
+// at most once a minute, so /status never waits on it.
+let loading = false;
+async function refreshHome(client) {
   const g = client.guilds.cache.get(HOME_ID);
-  if (!g) return null;
-  let data = homeCache.data;
+  if (!g) return;
+  loading = true;
   try {
     const owner = await g.fetchOwner();
-    await g.members.fetch();
-    data = {
+    await g.members.fetch({ time: 20000 });
+    homeCache.data = {
       name: g.name,
       icon: g.iconURL({ extension: 'png', size: 128 }),
       members: g.memberCount,
@@ -34,8 +34,13 @@ async function homeInfo(client) {
       admins: g.members.cache.filter(m => m.id !== owner.id && isAdmin(m, client.config)).map(m => person(m, 'Admin')).slice(0, 20),
     };
   } catch (e) { console.error('Status: could not load home server info:', e.message); }
-  homeCache = { at: Date.now(), data };
-  return data;
+  homeCache.at = Date.now();
+  loading = false;
+}
+function homeInfo(client) {
+  if (!HOME_ID) return null;
+  if (!loading && Date.now() - homeCache.at >= 60_000) refreshHome(client); // not awaited on purpose
+  return homeCache.data;
 }
 
 module.exports = (client, port = process.env.PORT || 3000) => {
@@ -50,7 +55,7 @@ module.exports = (client, port = process.env.PORT || 3000) => {
           users: guilds.reduce((n, g) => n + g.memberCount, 0),                                  // total members in all servers
           onlineMembers: guilds.reduce((n, g) => n + g.presences.cache.filter(isOnline).size, 0), // members online right now
           uptime: Math.floor((client.uptime || 0) / 1000),
-          home: client.isReady() ? await homeInfo(client) : null,
+          home: client.isReady() ? homeInfo(client) : null,
         };
         res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': ORIGIN, 'Cache-Control': 'no-store' });
         return res.end(JSON.stringify(body));
