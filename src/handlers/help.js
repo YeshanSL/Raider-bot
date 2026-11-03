@@ -19,12 +19,27 @@ module.exports = async (message, args, client) => {
         value: '`/dashboard` — Your personal stats dashboard',
       },
       {
+        name: '💰 Points & Shop',
+        value: [
+          '`/points balance [user]` — Check a points balance',
+          '`/points gift <user> <amount>` — Send points to someone',
+          '`/shop view` — See items and your balance',
+          '`/shop buy <item> [text]` — Buy an item',
+          '`/shop additem` · `/shop removeitem` — Manage items (Admin)',
+        ].join('\n'),
+      },
+      {
+        name: '📦 Weekly Wrapped',
+        value: '`/wrapped` — Run the weekly recap now (Admin; auto-posts Sundays 12PM IST)',
+      },
+      {
         name: '⚔️ FPS Team Mode (Admin)',
         value: [
           '`/team setup <channel>` — Set the voice channel',
           '`/team assign <user> <team>` — Assign to team',
           '`/team on` — Activate team isolation',
           '`/team off` — Deactivate, merge back',
+          '`/team panel <on|off>` — Self-select team button panel',
           '`/team status` — View current teams',
         ].join('\n'),
       },

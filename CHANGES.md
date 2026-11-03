@@ -3,6 +3,7 @@
 - src/status-server.js → /status now returns: online, ping, servers, total members, online members, uptime, + owner/admins of STATUS_GUILD_ID
 - .env.example        → two new optional lines: STATUS_GUILD_ID, STATUS_ORIGIN
 Copy these three files over your project, add the two variables on Render (Environment tab), redeploy.
+> ⚠️ Don't do this again: copying `index.js` over the project removed the MongoDB connection. Apply changes as edits and check `git diff` first (see DOCUMENTATION.md, section 9.6).
 
 
 ## Website control panel + startup fix
@@ -11,3 +12,12 @@ Copy these three files over your project, add the two variables on Render (Envir
 - **New:** CORS preflight (OPTIONS) is answered, so the website can send POST requests.
 - **New env var:** `PANEL_PASSKEY` (same passkey as the website). Added to `.env.example`, with `MONGODB_URI` / `MONGODB_DB`.
 - **Fixed:** README merge-conflict markers; `.gitignore` now ignores `node_modules/`.
+
+
+## Stability fixes + points/shop/wrapped (3 Nov 2026)
+- **Fixed:** an error in any event handler (e.g. a failed welcome or level-up send) no longer crashes the bot. Errors are logged instead (`index.js`).
+- **Fixed:** voice XP was counted twice (per-minute tick + payout on leaving). Now only the 1-minute tick awards it: 5 XP/min (`voiceStateUpdate.js`).
+- **Back:** `/points`, `/shop` and `/wrapped` slash commands. `/wrapped` is now admin only. **Run `npm run deploy` once** so Discord shows them.
+- **Fixed:** `.env.example` now says `MONGODB_DB=raider`, the database that holds the live data.
+- **Cleanup:** `node_modules/` and the empty `Raider-bot` submodule entry are no longer tracked in git. `npm install` on Render recreates `node_modules`.
+- **Docs:** README and DOCUMENTATION.md updated, with a new "Database: do's and don'ts" section. Website items moved to `WEBSITE-TODO.md`.

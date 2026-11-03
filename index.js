@@ -27,9 +27,17 @@ const eventsPath = path.join(__dirname, 'src/events');
 const eventFiles = fs.readdirSync(eventsPath).filter(f => f.endsWith('.js'));
 for (const file of eventFiles) {
   const event = require(path.join(eventsPath, file));
-  if (event.once) client.once(event.name, (...args) => event.execute(...args, client));
-  else client.on(event.name, (...args) => event.execute(...args, client));
+  // Log handler errors instead of letting them crash the process (an unhandled
+  // rejection exits Node, which restarts the bot and drops active voice sessions)
+  const run = (...args) => Promise.resolve()
+    .then(() => event.execute(...args, client))
+    .catch(err => console.error(`❌ Error in ${event.name} handler:`, err));
+  if (event.once) client.once(event.name, run);
+  else client.on(event.name, run);
 }
+
+// Safety net for any other promise that fails without a .catch
+process.on('unhandledRejection', err => console.error('❌ Unhandled promise rejection:', err));
 
 // Rotating status tags every 40 seconds
 const tags = [
