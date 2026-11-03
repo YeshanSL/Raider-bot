@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, Collection, ActivityType } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, ActivityType, Events } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 
@@ -43,7 +43,7 @@ const tags = [
 ];
 let tagIndex = 0;
 
-client.once('ready', () => {
+client.once(Events.ClientReady, () => {
   console.log(`✅ Raider is online as ${client.user.tag}`);
   // Set initial tag
   client.user.setActivity(tags[0].name, { type: tags[0].type });
@@ -58,4 +58,26 @@ client.once('ready', () => {
   }, 40000);
 });
 
-client.login(process.env.DISCORD_TOKEN);
+// Load data from MongoDB before logging in, so every handler sees it
+client.db.connect()
+  .then(() => {
+    // Re-apply channels saved via /setchannel (or the website's control panel)
+    for (const overrides of Object.values(client.db.getAllChannelOverrides())) {
+      Object.assign(client.config, overrides);
+    }
+    return client.login(process.env.DISCORD_TOKEN);
+  })
+  .catch(err => {
+    console.error('❌ Startup failed:', err.message);
+    process.exit(1);
+  });
+
+// Render sends SIGTERM on redeploy/restart — finish pending DB writes first
+for (const signal of ['SIGTERM', 'SIGINT']) {
+  process.on(signal, async () => {
+    console.log(`🛑 ${signal} received, saving data...`);
+    await client.db.close().catch(() => {});
+    client.destroy();
+    process.exit(0);
+  });
+}

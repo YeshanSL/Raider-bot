@@ -5,6 +5,7 @@
 //   STATUS_GUILD_ID = your main/community server ID → also returns that server's owner + admins
 //   STATUS_ORIGIN   = your website address (e.g. https://raiderbot-web.vercel.app). Default: any site.
 const http = require('http');
+const panel = require('./web-panel');
 
 const HOME_ID = process.env.STATUS_GUILD_ID || '';
 const ORIGIN = process.env.STATUS_ORIGIN || '*';
@@ -46,6 +47,7 @@ function homeInfo(client) {
 module.exports = (client, port = process.env.PORT || 3000) => {
   http.createServer(async (req, res) => {
     try {
+      if (req.url.split('?')[0].startsWith('/panel')) return panel(client, req, res); // website control panel
       if (req.url.split('?')[0] === '/status') {
         const guilds = [...client.guilds.cache.values()];
         const body = {
