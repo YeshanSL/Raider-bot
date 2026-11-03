@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # ⚔️ Raider Bot
 
 A full-featured Discord bot for gaming communities — leveling, voice tracking, FPS team mode, welcome messages, and more.
@@ -170,6 +169,14 @@ For 24/7 uptime, host on:
 ---
 
 Built with ❤️ for the Raider squad.
-=======
-# Raider-bot
->>>>>>> bfd67cfdee34f634321cf1b6971d1d79b966ba01
+
+---
+
+## 🌐 Website control panel
+
+The website's **Control** page talks to this bot through `/panel/*` (see `src/web-panel.js`).
+
+1. Create a passkey with the website's `set-passkey.html` and put the hash in the site's `js/config.js`.
+2. Set the **same passkey text** as `PANEL_PASSKEY` in your bot's environment (Render → Environment).
+3. Optional: set `STATUS_ORIGIN` to your website address (e.g. `https://raiderbot-web.vercel.app`, no trailing slash) so only your site can call the bot. Leave it empty if unsure.
+4. Redeploy. Open `https://YOUR-BOT.onrender.com/status` — you should see JSON.
