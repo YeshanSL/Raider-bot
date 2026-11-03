@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, PermissionsBitField } = require('discord.js');
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -164,8 +164,14 @@ async function generateWrapped(client, guild) {
 }
 
 // !raider wrapped / `/wrapped` — manually trigger the recap right now
-// (handy for testing without waiting for Sunday).
+// (handy for testing without waiting for Sunday). Admin only, because each run
+// saves a new snapshot and resets what Sunday's recap counts as "XP gained".
 module.exports = async (message, args, client) => {
+  const config = client.config;
+  const isAdmin = message.member.permissions.has(PermissionsBitField.Flags.Administrator) ||
+    (config.ADMIN_ROLE_ID && message.member.roles.cache.has(config.ADMIN_ROLE_ID));
+  if (!isAdmin) return message.reply('❌ Only admins can run the weekly recap manually.');
+
   const embed = await generateWrapped(client, message.guild);
   if (!embed) {
     return message.reply("📦 No voice activity in the last 7 days — nothing to wrap yet.");
