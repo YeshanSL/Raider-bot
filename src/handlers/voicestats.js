@@ -9,6 +9,22 @@ function formatTime(seconds) {
   return `${s}s`;
 }
 
+// Live view of the member's current voice sitting: how long, the current rate,
+// and when the rate doubles next.
+function currentSitting(client, guildId, userId) {
+  const session = client.db.getActiveSession(guildId, userId);
+  if (!session) return 'Not in voice right now';
+  const config = client.config;
+  const seconds = Math.floor((Date.now() - session.sittingStart) / 1000);
+  const minutes = seconds / 60;
+  const multiplier = client.db.getSittingMultiplier(minutes);
+  // Rate doubles at FIRST_DOUBLE_MIN, then at 2×, 4×, 8× … that
+  const nextAt = config.VOICE_SITTING_FIRST_DOUBLE_MIN * multiplier;
+  const secondsToNext = Math.max(0, Math.ceil(nextAt * 60 - seconds));
+  return `${formatTime(seconds)} straight · **${config.XP_PER_VOICE_MIN * multiplier} XP/min** (${multiplier}x) · ` +
+    `doubles to ${config.XP_PER_VOICE_MIN * multiplier * 2} XP/min in ${formatTime(secondsToNext)}`;
+}
+
 module.exports = async (message, args, client) => {
   const target = message.mentions.users.first() || message.author;
   const guildId = message.guild.id;
@@ -28,6 +44,7 @@ module.exports = async (message, args, client) => {
       { name: '📋 Sessions', value: `${sessionCount}`, inline: true },
       { name: '📊 Avg Session', value: formatTime(avgSeconds), inline: true },
       { name: '🕐 Last Session', value: lastSession ? `${formatTime(lastSession.duration)} on <t:${Math.floor(lastSession.timestamp / 1000)}:D>` : 'No sessions yet', inline: false },
+      { name: '🔥 Current Sitting', value: currentSitting(client, guildId, target.id), inline: false },
     )
     .setFooter({ text: 'Raider Bot • Voice Tracker' })
     .setTimestamp();

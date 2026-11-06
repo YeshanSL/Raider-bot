@@ -96,7 +96,11 @@ async function sendVoiceSummary(client, guildId, userId, channel, result, member
   if (!logChannel) return;
 
   const membersInChannel = channel?.members?.size || 0;
-  const xpEarned = Math.floor((result.duration / 60) * config.XP_PER_VOICE_MIN);
+  // XP actually paid by the 1-minute tick during this session (before boosts)
+  const xpEarned = result.xpEarned || 0;
+  const sittingBonus = result.multiplier > 1
+    ? `${result.multiplier}x → ${result.multiplier * config.XP_PER_VOICE_MIN} XP/min (in voice for ${result.sittingMinutes} min straight)`
+    : `None yet (stay ${config.VOICE_SITTING_FIRST_DOUBLE_MIN}+ min in one go)`;
 
   const embed = new EmbedBuilder()
     .setColor(config.COLORS.voice)
@@ -106,6 +110,7 @@ async function sendVoiceSummary(client, guildId, userId, channel, result, member
       { name: '⏱️ Time Spent', value: formatTime(result.duration), inline: true },
       { name: '👥 Members in Channel', value: `${membersInChannel + 1}`, inline: true },
       { name: '⚡ XP Earned', value: `+${xpEarned} XP`, inline: true },
+      { name: '🔥 Sitting Bonus', value: sittingBonus, inline: false },
       { name: '📅 Session', value: `<t:${Math.floor((Date.now() - result.duration * 1000) / 1000)}:t> → <t:${Math.floor(Date.now() / 1000)}:t>`, inline: false },
     )
     .setThumbnail(member?.user?.displayAvatarURL({ dynamic: true }) || null)

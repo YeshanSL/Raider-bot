@@ -2,7 +2,7 @@
 
 How the bot works, how it is configured and deployed, where its data lives, and what to watch out for when changing it.
 
-> **Last updated:** 3 Nov 2026 (MongoDB startup restored, crash protection, single voice XP, points/shop/wrapped commands back)
+> **Last updated:** 6 Nov 2026 (voice sitting bonus: voice XP doubles as a sitting doubles in length)
 
 ---
 
@@ -183,7 +183,9 @@ To get an ID in Discord, turn on **Settings → Advanced → Developer Mode**, t
 |---|---|---|
 | `XP_PER_MSG` | 15 | XP per chat message |
 | `XP_COOLDOWN_MS` | 60000 | Minimum gap between two XP-earning messages (1 min) |
-| `XP_PER_VOICE_MIN` | 5 | XP per minute in voice |
+| `XP_PER_VOICE_MIN` | 8 | Starting XP per minute in voice |
+| `VOICE_SITTING_FIRST_DOUBLE_MIN` | 10 | Minutes into a sitting when the voice rate first doubles; it doubles again at 2×, 4×, 8× … that |
+| `VOICE_SITTING_GRACE_MS` | 120000 | Leave-and-rejoin window that keeps a sitting going (2 min) |
 | `POINTS_PER_LEVEL_UP` | 10 | Shop points awarded per level gained |
 | `AFK_PREFIX` | `💤 ` | Nickname prefix while in the server's AFK channel |
 | `COLORS` | — | Embed colors per feature |
@@ -285,10 +287,25 @@ Run `npm run deploy` only after you add, rename or change options on a slash com
 | Source | Amount | Rules |
 |---|---|---|
 | Chat message | 15 XP | At most once per 60 s per member (`lastMsg` timestamp). Bots are ignored |
-| Voice | 5 XP per minute | Awarded by the 1-minute tick to every member in an active voice session. Nothing extra is paid when they leave |
+| Voice | 8 XP per minute, doubling with sitting length | Awarded by the 1-minute tick to every member in an active voice session. The rate depends on the current **sitting** (see below). Nothing extra is paid when they leave |
 | Shop items | varies | XP packs, mystery boxes |
 
-An active **XP boost** multiplies every XP gain, whatever the source.
+**Voice sitting bonus.** A sitting is continuous time in voice. Switching channels doesn't end it, and neither does leaving and rejoining within `VOICE_SITTING_GRACE_MS` (2 min). The voice rate doubles every time the current sitting doubles in length, with no upper limit:
+
+| Minutes into sitting | Multiplier | XP per minute |
+|---|---|---|
+| 0–9 | 1x | 8 |
+| 10–19 | 2x | 16 |
+| 20–39 | 4x | 32 |
+| 40–79 | 8x | 64 |
+| 80–159 | 16x | 128 |
+| 160–319 | 32x | 256 |
+| 320–639 | 64x | 512 |
+| … | doubles again | … |
+
+Totals for one sitting: 60 min ≈ 2,160 XP (six separate 10-minute visits earn 480), 2 h ≈ 8,560, 8 h ≈ 136,560, 24 h ≈ 1.2 million (level 0 → 32). Sittings live in memory, so a bot restart starts everyone's sitting over.
+
+An active **XP boost** multiplies every XP gain, whatever the source (for voice, on top of the sitting bonus).
 
 **Level curve.** XP resets at each level. Reaching the next level costs `100 × (level + 1)²`:
 
@@ -315,9 +332,9 @@ Leftover XP carries over, and one large gain can raise several levels at once. E
 - Joining a voice channel starts a session. The session is held **in memory only** until it ends.
 - Leaving ends the session and saves it to history with `userId`, `channelId`, `duration`, `timestamp`, and `game` (from the member's "Playing" status, if the Presence intent can see it).
 - Switching channels ends the old session and starts a new one.
-- A **Voice Session Summary** is posted to `VOICE_LOG_CHANNEL_ID` for sessions longer than 1 minute. It shows the time spent, the number of members in the channel, the XP earned (5 per minute, before boosts) and the start and end times.
+- A **Voice Session Summary** is posted to `VOICE_LOG_CHANNEL_ID` for sessions longer than 1 minute. It shows the time spent, the number of members in the channel, the voice XP actually earned in that channel (before boosts), the sitting bonus reached, and the start and end times.
 - History keeps the **last 2,000 sessions per server**.
-- `/voicestats` shows a member's total time, session count, average session length and last session, based on that history.
+- `/voicestats` shows a member's total time, session count, average session length and last session, based on that history. If they're in voice now, it also shows their **current sitting**: how long, the current XP/min, and when it next doubles.
 
 ### 7.3 AFK nickname
 
@@ -539,7 +556,7 @@ Everything else in the bot reaches the data through these exports (`client.db` o
 |---|---|
 | Connection | `connect()` loads every collection into memory; it must run before login. `close()` waits for pending writes and disconnects |
 | XP | `getXP(g,u)` → `{ xp, level, lastMsg }` · `setXP(g,u,data)` · `addXP(g,u,amount)` → `{ xp, level, lastMsg, leveledUp }` (applies active boosts, handles multi-level gains, awards points) · `xpForLevel(level)` = `100 × (level+1)²` · `totalXPEarned(level,xp)` · `getLeaderboard(g, limit=10)` |
-| Voice sessions | `startVoiceSession(g,u,channelId)` · `endVoiceSession(g,u,game)` → `{ duration, channelId, game }` or `null` (saves history) · `getActiveSession(g,u)` · `getActiveSessionsForChannel(g,channelId)` · `getSessions(g)` · `getSessionsSince(g,ms)` · `tickVoiceXP(client)` (the 1-minute voice XP award) |
+| Voice sessions | `startVoiceSession(g,u,channelId)` · `endVoiceSession(g,u,game)` → `{ duration, channelId, game, xpEarned, sittingMinutes, multiplier }` or `null` (saves history) · `getActiveSession(g,u)` · `getActiveSessionsForChannel(g,channelId)` · `getSessions(g)` · `getSessionsSince(g,ms)` · `tickVoiceXP(client)` (the 1-minute voice XP award) · `getSittingMultiplier(minutes)` (1x, 2x, 4x … by sitting length) |
 | Team mode | `getTeams(g)` · `setTeams(g,data)` |
 | Soundboard | `getSoundboardBlocks(g)` · `setSoundboardBlocks(g,data)` (an empty object deletes the document) |
 | Wrapped | `getWrappedSnapshot(g)` · `setWrappedSnapshot(g,data)` |
@@ -592,7 +609,7 @@ The live data (levels, XP, points, sessions, teams, soundboard blocks) is in the
 
 | Job | Schedule | Where | What it does |
 |---|---|---|---|
-| Voice XP tick | every 60 s | `events/ready.js` → `database.tickVoiceXP` | +5 XP (boosted if active) to everyone in voice; fires `voiceLevelUp` |
+| Voice XP tick | every 60 s | `events/ready.js` → `database.tickVoiceXP` | +8 XP, doubling with sitting length (boosted if active) to everyone in voice; fires `voiceLevelUp` |
 | Status rotation | every 40 s | `index.js` | Cycles the bot's activity text |
 | Weekly Wrapped | Sun 12:00 Asia/Kolkata | `scheduler.js` | Posts the recap for every server |
 | Flair expiry | every 5 min | `scheduler.js` | Removes expired flair from nicknames and clears the record |
@@ -622,7 +639,7 @@ The bot's role must also be **above** the roles of the members it acts on.
 
 | # | Issue | Impact | Fix |
 |---|---|---|---|
-| 1 | **Active voice sessions live only in memory.** | A restart or redeploy drops current sessions: no history entry or summary, and no voice XP until the member rejoins | Persist active sessions, or rebuild them from current voice states on `ready` |
+| 1 | **Active voice sessions live only in memory.** | A restart or redeploy drops current sessions: no history entry or summary, no voice XP until the member rejoins, and everyone's sitting bonus starts over at 1x | Persist active sessions, or rebuild them from current voice states on `ready` |
 | 2 | **Channel settings are global, not per server.** `client.config` is shared, so `/setchannel` in one server changes it for every server. | Only matters if the bot is in more than one server | Read overrides per server when sending messages |
 | 3 | **MongoDB is read only at startup** (in-memory cache). | Manual edits in Atlas need a restart. Never run two bot instances on the same database | — (by design) |
 | 4 | `/rank` only ranks the top 100. | Members below that show "Unranked" | Compute the rank from the full list |
