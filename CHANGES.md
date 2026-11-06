@@ -21,3 +21,11 @@ Copy these three files over your project, add the two variables on Render (Envir
 - **Fixed:** `.env.example` now says `MONGODB_DB=raider`, the database that holds the live data.
 - **Cleanup:** `node_modules/` and the empty `Raider-bot` submodule entry are no longer tracked in git. `npm install` on Render recreates `node_modules`.
 - **Docs:** README and DOCUMENTATION.md updated, with a new "Database: do's and don'ts" section. Website items moved to `WEBSITE-TODO.md`.
+
+
+## Voice sitting bonus (6 Nov 2026)
+- **New:** voice XP per minute now doubles every time one continuous sitting doubles in length: 8 XP/min for the first 10 min, then 16 at 10 min, 32 at 20, 64 at 40, 128 at 80, 256 at 160, 512 at 320, with no upper limit. 60 min in one go earns about 2,160 XP vs 480 for 6 × 10 min visits.
+- Switching channels, or leaving and rejoining within 2 minutes, keeps the sitting going.
+- Tunable in `src/config.js`: `XP_PER_VOICE_MIN` (now 8), `VOICE_SITTING_FIRST_DOUBLE_MIN`, `VOICE_SITTING_GRACE_MS`.
+- `/help` explains how chat and voice XP are earned. `/voicestats` shows the member's current sitting, XP/min and time until the next doubling.
+- **Fixed:** the Voice Session Summary now shows the XP actually earned (it used to estimate 5 XP/min) and adds a Sitting Bonus field.

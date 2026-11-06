@@ -12,6 +12,12 @@ module.exports = async (message, args, client) => {
           '`/rank [user]` — View your or someone\'s rank',
           '`/leaderboard` — Top 10 members',
           '`/voicestats [user]` — Voice activity stats',
+          '',
+          `💬 Chat: **${client.config.XP_PER_MSG} XP** per message (1 min cooldown)`,
+          `🎙️ Voice: **${client.config.XP_PER_VOICE_MIN} XP/min**, doubling every time your sitting doubles ` +
+            `(${client.config.XP_PER_VOICE_MIN * 2} at ${client.config.VOICE_SITTING_FIRST_DOUBLE_MIN}m, ` +
+            `${client.config.XP_PER_VOICE_MIN * 4} at ${client.config.VOICE_SITTING_FIRST_DOUBLE_MIN * 2}m, ` +
+            `${client.config.XP_PER_VOICE_MIN * 8} at ${client.config.VOICE_SITTING_FIRST_DOUBLE_MIN * 4}m…). Stay in to keep it going!`,
         ].join('\n'),
       },
       {

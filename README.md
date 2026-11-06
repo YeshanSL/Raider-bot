@@ -63,10 +63,10 @@ You should see `🍃 Connected to MongoDB and loaded data` in the log. If it's m
 ## 🎮 Features
 
 ### ✅ Leveling
-Members earn **15 XP** per chat message (1 min cooldown) and **5 XP per minute** in voice. Level-ups are announced in the level-up channel, and every level gained also awards **10 points**.
+Members earn **15 XP** per chat message (1 min cooldown) and **8 XP per minute** in voice. The voice rate doubles every time one continuous sitting doubles in length: 16 XP/min at 10 min, 32 at 20, 64 at 40, 128 at 80, and so on with no limit. Switching channels or a reconnect within 2 minutes doesn't break a sitting. Level-ups are announced in the level-up channel, and every level gained also awards **10 points**.
 
 ### ✅ Voice Tracking
-Every voice session is logged. Leaving a session longer than a minute posts a **Voice Session Summary** (time spent, members in channel, XP earned). `/voicestats` shows totals and averages.
+Every voice session is logged. Leaving a session longer than a minute posts a **Voice Session Summary** (time spent, members in channel, XP earned). `/voicestats` shows totals, averages and, while you're in voice, your current sitting and XP rate.
 
 ### ✅ Points Shop
 Spend points on XP boosts, temporary nickname flair, shoutouts, instant XP packs and mystery boxes. Admins add the items. Points are separate from XP, so spending them never lowers your level.
