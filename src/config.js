@@ -9,6 +9,13 @@ module.exports = {
   // dashboard channel if you don't set this one separately.
   WRAPPED_CHANNEL_ID: process.env.WRAPPED_CHANNEL_ID || '',
 
+  // ─── Voice session summary ───
+  // Image shown at the top-right of the summary (direct https link). Falls
+  // back to the server icon, then the bot's avatar.
+  VOICE_SUMMARY_IMAGE_URL: process.env.VOICE_SUMMARY_IMAGE_URL || '',
+  // Sessions with less total voice time than this are not summarised.
+  VOICE_SUMMARY_MIN_SECONDS: 60,
+
   // ─── XP Settings ───
   XP_PER_MSG: 15,          // XP per message
   XP_PER_VOICE_MIN: 5,     // XP per minute in voice
@@ -37,6 +44,7 @@ module.exports = {
     boost: 0xFF73FA,
     levelup: 0xFFD700,
     voice: 0x57F287,
+    voiceSummary: 0x1EC8FF,
     team: 0xED4245,
     info: 0x5865F2,
     wrapped: 0x1DB954,
