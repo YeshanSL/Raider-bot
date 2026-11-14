@@ -12,11 +12,31 @@ module.exports = async (message, args, client) => {
           '`/rank [user]` — View your or someone\'s rank',
           '`/leaderboard` — Top 10 members',
           '`/voicestats [user]` — Voice activity stats',
+          '',
+          `💬 Chat: **${client.config.XP_PER_MSG} XP** per message (1 min cooldown)`,
+          `🎙️ Voice: **${client.config.XP_PER_VOICE_MIN} XP/min**, doubling every time your sitting doubles ` +
+            `(${client.config.XP_PER_VOICE_MIN * 2} at ${client.config.VOICE_SITTING_FIRST_DOUBLE_MIN}m, ` +
+            `${client.config.XP_PER_VOICE_MIN * 4} at ${client.config.VOICE_SITTING_FIRST_DOUBLE_MIN * 2}m, ` +
+            `${client.config.XP_PER_VOICE_MIN * 8} at ${client.config.VOICE_SITTING_FIRST_DOUBLE_MIN * 4}m…). Stay in to keep it going!`,
         ].join('\n'),
       },
       {
         name: '🎮 Dashboard',
         value: '`/dashboard` — Your personal stats dashboard',
+      },
+      {
+        name: '💰 Points & Shop',
+        value: [
+          '`/points balance [user]` — Check a points balance',
+          '`/points gift <user> <amount>` — Send points to someone',
+          '`/shop view` — See items and your balance',
+          '`/shop buy <item> [text]` — Buy an item',
+          '`/shop additem` · `/shop removeitem` — Manage items (Admin)',
+        ].join('\n'),
+      },
+      {
+        name: '📦 Weekly Wrapped',
+        value: '`/wrapped` — Run the weekly recap now (Admin; auto-posts Sundays 12PM IST)',
       },
       {
         name: '⚔️ FPS Team Mode (Admin)',
@@ -25,6 +45,7 @@ module.exports = async (message, args, client) => {
           '`/team assign <user> <team>` — Assign to team',
           '`/team on` — Activate team isolation',
           '`/team off` — Deactivate, merge back',
+          '`/team panel <on|off>` — Self-select team button panel',
           '`/team status` — View current teams',
         ].join('\n'),
       },

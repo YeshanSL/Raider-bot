@@ -1,5 +1,5 @@
 // Handler registry — returns handler or null
-const handlers = ['rank', 'leaderboard', 'team', 'dashboard', 'setchannel', 'voicestats', 'help', 'soundboard'];
+const handlers = ['rank', 'leaderboard', 'team', 'dashboard', 'setchannel', 'voicestats', 'help', 'soundboard', 'points', 'shop', 'wrapped'];
 
 // Commands whose name differs from their handler file (all three soundboard
 // commands share handlers/soundboard.js).

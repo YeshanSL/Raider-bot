@@ -132,25 +132,61 @@ function getLeaderboard(guildId, limit = 10) {
 }
 
 // ─── Voice Sessions ───
-const activeSessions = {}; // in-memory: { guildId: { userId: { joinTime, channelId } } }
+// in-memory: { guildId: { userId: { joinTime, channelId, sittingStart, xpEarned } } }
+// A "session" is time in one channel; a "sitting" is continuous time in voice
+// (it survives channel switches and short reconnects) and drives the XP bonus.
+const activeSessions = {};
+// Sittings that just ended, kept for the grace window so a quick rejoin or a
+// channel switch continues them: { guildId: { userId: { sittingStart, leftAt } } }
+const recentSittings = {};
+
+function sittingGraceMs() {
+  return require('./config').VOICE_SITTING_GRACE_MS || 0;
+}
 
 function startVoiceSession(guildId, userId, channelId) {
+  const now = Date.now();
   if (!activeSessions[guildId]) activeSessions[guildId] = {};
-  activeSessions[guildId][userId] = { joinTime: Date.now(), channelId };
+  const recent = recentSittings[guildId]?.[userId];
+  const continues = recent && now - recent.leftAt <= sittingGraceMs();
+  if (recent) delete recentSittings[guildId][userId];
+  activeSessions[guildId][userId] = {
+    joinTime: now,
+    channelId,
+    sittingStart: continues ? recent.sittingStart : now,
+    xpEarned: 0,
+  };
+}
+
+// Voice XP multiplier for a sitting that has lasted `minutes`: doubles each
+// time the sitting doubles in length (1x before the first doubling, 2x at
+// FIRST_DOUBLE_MIN, 4x at twice that, 8x at four times that, ...).
+function getSittingMultiplier(minutes) {
+  const first = require('./config').VOICE_SITTING_FIRST_DOUBLE_MIN || 10;
+  if (minutes < first) return 1;
+  return 2 ** (Math.floor(Math.log2(minutes / first)) + 1);
 }
 
 function endVoiceSession(guildId, userId, game = null) {
   const session = activeSessions[guildId]?.[userId];
   if (!session) return null;
-  const duration = Math.floor((Date.now() - session.joinTime) / 1000); // seconds
+  const now = Date.now();
+  const duration = Math.floor((now - session.joinTime) / 1000); // seconds
+  const sittingMinutes = Math.floor((now - session.sittingStart) / 60000);
   delete activeSessions[guildId][userId];
+  if (!recentSittings[guildId]) recentSittings[guildId] = {};
+  recentSittings[guildId][userId] = { sittingStart: session.sittingStart, leftAt: now };
   // Save to history
   if (!cache.sessions[guildId]) cache.sessions[guildId] = [];
   cache.sessions[guildId].push({ userId, channelId: session.channelId, duration, timestamp: Date.now(), game });
   // Keep last 2000 sessions per guild (enough for a weekly recap on an active server)
   if (cache.sessions[guildId].length > 2000) cache.sessions[guildId] = cache.sessions[guildId].slice(-2000);
   persist('sessions', guildId);
-  return { duration, channelId: session.channelId, game };
+  return {
+    duration, channelId: session.channelId, game,
+    xpEarned: session.xpEarned, sittingMinutes,
+    multiplier: getSittingMultiplier(sittingMinutes),
+  };
 }
 
 // All saved sessions for a guild (oldest first)
@@ -174,12 +210,26 @@ function getActiveSessionsForChannel(guildId, channelId) {
     .map(([userId, s]) => ({ userId, joinTime: s.joinTime }));
 }
 
-// ─── Voice XP ─── tick every minute for all active sessions
+// ─── Voice XP ─── tick every minute for all active sessions.
+// The rate grows with the length of the member's current sitting
+// (doubling, see getSittingMultiplier); an XP boost then multiplies it inside addXP.
 function tickVoiceXP(client) {
   const config = require('./config');
+  const now = Date.now();
+
+  // Forget ended sittings once their grace window has passed
+  for (const users of Object.values(recentSittings)) {
+    for (const [userId, s] of Object.entries(users)) {
+      if (now - s.leftAt > sittingGraceMs()) delete users[userId];
+    }
+  }
+
   for (const [guildId, users] of Object.entries(activeSessions)) {
-    for (const [userId] of Object.entries(users)) {
-      const result = addXP(guildId, userId, config.XP_PER_VOICE_MIN);
+    for (const [userId, session] of Object.entries(users)) {
+      const sittingMinutes = (now - session.sittingStart) / 60000;
+      const amount = Math.round(config.XP_PER_VOICE_MIN * getSittingMultiplier(sittingMinutes));
+      session.xpEarned += amount;
+      const result = addXP(guildId, userId, amount);
       if (result.leveledUp) {
         // Fire level-up event for voice
         client.emit('voiceLevelUp', guildId, userId, result.level);
@@ -313,7 +363,7 @@ module.exports = {
   connect, close,
   getXP, setXP, addXP, xpForLevel, totalXPEarned, getLeaderboard,
   startVoiceSession, endVoiceSession, getActiveSession,
-  getActiveSessionsForChannel, getSessions, getSessionsSince, tickVoiceXP,
+  getActiveSessionsForChannel, getSessions, getSessionsSince, tickVoiceXP, getSittingMultiplier,
   getTeams, setTeams,
   getSoundboardBlocks, setSoundboardBlocks,
   getWrappedSnapshot, setWrappedSnapshot,

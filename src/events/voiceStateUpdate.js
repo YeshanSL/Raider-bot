@@ -1,4 +1,4 @@
-const { Events, EmbedBuilder } = require('discord.js');
+const { Events } = require('discord.js');
 const db = require('../database');
 const voiceSummary = require('../voice-summary');
 
@@ -37,7 +37,6 @@ async function syncAfkNickname(oldState, newState, client) {
 module.exports = {
   name: Events.VoiceStateUpdate,
   async execute(oldState, newState, client) {
-    const config = client.config;
     const userId = newState.member?.id || oldState.member?.id;
     const guildId = newState.guild?.id || oldState.guild?.id;
     if (!userId || !guildId) return;
@@ -62,17 +61,10 @@ module.exports = {
     }
 
     // ─── Leave VC ───
+    // Voice XP is awarded only by the 1-minute tick (database.tickVoiceXP),
+    // so nothing extra is paid out here.
     if (leftChannel) {
-      const result = db.endVoiceSession(guildId, userId, currentGame(oldState.member));
-      if (result && result.duration > 10) {
-        const voiceXPGained = Math.floor((result.duration / 60) * config.XP_PER_VOICE_MIN);
-        if (voiceXPGained > 0) {
-          const xpResult = db.addXP(guildId, userId, voiceXPGained);
-          if (xpResult.leveledUp) {
-            await sendVoiceLevelUp(client, guildId, userId, xpResult.level, oldState.member);
-          }
-        }
-      }
+      db.endVoiceSession(guildId, userId, currentGame(oldState.member));
     }
 
     // ─── Session summary ───
@@ -88,27 +80,3 @@ module.exports = {
   },
 };
 
-async function sendVoiceLevelUp(client, guildId, userId, newLevel, member) {
-  const config = client.config;
-  const db = require('../database');
-  const channelId = config.LEVEL_UP_CHANNEL_ID || config.VOICE_LOG_CHANNEL_ID;
-  if (!channelId) return;
-  const channel = client.guilds.cache.get(guildId)?.channels.cache.get(channelId);
-  if (!channel) return;
-
-  const xpData = db.getXP(guildId, userId);
-
-  const embed = new EmbedBuilder()
-    .setColor(config.COLORS.levelup)
-    .setTitle('🎙️ Voice Level Up!')
-    .setDescription(`${member} leveled up from voice activity! 🎉`)
-    .addFields(
-      { name: '🏆 New Level', value: `**Level ${newLevel}**`, inline: true },
-      { name: '⚡ XP', value: `${xpData.xp} / ${db.xpForLevel(newLevel)} XP`, inline: true },
-    )
-    .setThumbnail(member?.user?.displayAvatarURL({ dynamic: true }) || null)
-    .setFooter({ text: 'Stay in voice to keep leveling!' })
-    .setTimestamp();
-
-  await channel.send({ embeds: [embed] }).catch(() => {});
-}
